@@ -1,0 +1,77 @@
+name: Build Apps
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Chromium directly into project
+        run: npx playwright install chromium
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: node_modules/playwright/.local-browsers
+
+      - name: Build Windows EXE
+        run: npx electron-builder --win --x64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMaps-Scraper-Windows-Setup
+          path: dist/*.exe
+          retention-days: 30
+
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Chromium directly into project
+        run: npx playwright install chromium
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: node_modules/playwright/.local-browsers
+
+      - name: Verify browsers are in place
+        run: |
+          echo "Browser folder contents:"
+          ls -la node_modules/playwright/.local-browsers/
+
+      - name: Build Mac DMG
+        run: npx electron-builder --mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Mac DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: GMaps-Scraper-Mac
+          path: dist/*.dmg
+          retention-days: 30
