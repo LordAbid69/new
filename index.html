@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GMaps Scraper</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Rajdhani:wght@600;700&display=swap');
+:root {
+  --bg:#080b12; --bg2:#0d1117; --bg3:#111823; --border:#1e2d42;
+  --accent:#00d4ff; --green:#00ff88; --orange:#ff6b35;
+  --yellow:#ffb347; --red:#ff4757; --text:#c8d8f0; --muted:#4a6080;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none;}
+
+/* TITLEBAR */
+#titlebar{display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border-bottom:1px solid var(--border);height:42px;padding:0 16px;-webkit-app-region:drag;flex-shrink:0;}
+.tb-brand{display:flex;align-items:center;gap:10px;}
+.tb-gem{width:18px;height:18px;background:var(--accent);clip-path:polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%);}
+.tb-title{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:4px;color:var(--accent);text-transform:uppercase;}
+.tb-btns{display:flex;gap:5px;-webkit-app-region:no-drag;}
+.tb-btn{width:28px;height:20px;background:transparent;border:1px solid var(--border);border-radius:3px;color:var(--muted);font-size:10px;cursor:pointer;transition:all .15s;}
+.tb-btn:hover{background:var(--border);color:var(--text);}
+.tb-btn.x:hover{background:var(--red);border-color:var(--red);color:#fff;}
+
+/* LAYOUT */
+#layout{flex:1;display:grid;grid-template-columns:290px 1fr;grid-template-rows:1fr 190px;overflow:hidden;}
+
+/* SIDEBAR */
+#sidebar{grid-row:1/3;background:#0c1520;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sec-hdr{padding:10px 16px;border-bottom:1px solid var(--border);font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:600;letter-spacing:3px;color:var(--muted);text-transform:uppercase;flex-shrink:0;}
+.controls{padding:16px;display:flex;flex-direction:column;gap:12px;flex-shrink:0;}
+.lbl{font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+input[type=text],input[type=number]{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;transition:border-color .2s;}
+input:focus{border-color:var(--accent);}
+.folder-row{display:flex;gap:6px;}
+.folder-row input{flex:1;font-size:10px;}
+.folder-btn{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--accent);cursor:pointer;font-size:13px;transition:background .15s;}
+.folder-btn:hover{background:var(--border);}
+.btn{width:100%;border:none;border-radius:5px;padding:11px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn-start{background:var(--accent);color:var(--bg);}
+.btn-start:not(:disabled):hover{background:#00b8e0;}
+.btn-done{background:var(--green);color:var(--bg);display:none;}
+.btn-done:hover{background:#00e077;}
+.btn-stop{background:transparent;color:var(--red);border:1px solid var(--red);display:none;}
+.btn-stop:hover{background:var(--red);color:#fff;}
+.show{display:block!important;}
+
+.status{margin:0 16px 10px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;font-size:10px;letter-spacing:1px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.dot.waiting{background:var(--yellow);animation:blink 1s infinite;}
+.dot.active{background:var(--green);animation:blink .7s infinite;}
+.dot.done{background:var(--green);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+.prog-wrap{margin:0 16px 10px;flex-shrink:0;}
+.prog-label{font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:5px;}
+.prog-bar{height:3px;background:var(--border);border-radius:3px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));width:0%;transition:width .4s;}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 16px;margin-top:auto;flex-shrink:0;}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;}
+.stat-val{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--accent);line-height:1;}
+.stat-lbl{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+
+/* TABLE */
+#table-wrap{background:var(--bg2);display:flex;flex-direction:column;overflow:hidden;}
+.table-scroll{flex:1;overflow:auto;}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead th{
+  background:var(--bg3);padding:9px 14px;text-align:left;
+  font-family:'Rajdhani',sans-serif;font-size:9px;font-weight:600;
+  letter-spacing:2px;color:var(--muted);text-transform:uppercase;
+  border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap;
+}
+tbody tr{border-bottom:1px solid rgba(30,45,66,.5);}
+tbody tr:hover{background:rgba(0,212,255,.04);}
+tbody tr.new{animation:rowIn .3s ease;}
+@keyframes rowIn{from{opacity:0;background:rgba(0,212,255,.12)}to{opacity:1}}
+td{padding:7px 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+td.c-num{color:var(--muted);max-width:40px;}
+td.c-name{color:var(--accent);font-weight:600;max-width:180px;}
+td.c-type{color:var(--orange);font-size:10px;max-width:140px;}
+td.c-phone{color:var(--yellow);max-width:140px;}
+td.c-email{color:var(--green);max-width:200px;}
+td.c-site{max-width:160px;}
+td.c-addr{max-width:200px;}
+td.c-hours{max-width:120px;}
+td.c-intro{color:var(--muted);font-size:10px;max-width:220px;}
+
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:10px;}
+.empty-icon{font-size:40px;opacity:.25;}
+.empty-txt{font-family:'Rajdhani',sans-serif;font-size:15px;letter-spacing:3px;}
+
+/* LOG */
+#log-wrap{background:var(--bg);border-top:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+#log-body{flex:1;overflow-y:auto;padding:8px 14px;font-size:11px;line-height:1.8;}
+.ll{display:flex;gap:10px;}
+.lt{color:var(--muted);flex-shrink:0;}
+.info{color:var(--text);}
+.success{color:var(--green);}
+.warn{color:var(--yellow);}
+.error{color:var(--red);}
+
+#done-bar{display:none;padding:10px 16px;background:rgba(0,255,136,.07);border-top:1px solid var(--green);align-items:center;justify-content:space-between;flex-shrink:0;}
+#done-bar.show{display:flex;}
+.done-msg{font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--green);letter-spacing:1px;}
+.open-btn{background:var(--green);color:var(--bg);border:none;border-radius:4px;padding:5px 14px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;}
+.open-btn:hover{background:#00e077;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+</style>
+</head>
+<body>
+
+<div id="titlebar">
+  <div class="tb-brand">
+    <div class="tb-gem"></div>
+    <span class="tb-title">GMaps Scraper</span>
+  </div>
+  <div class="tb-btns">
+    <button class="tb-btn" onclick="api.minimize()">─</button>
+    <button class="tb-btn" onclick="api.maximize()">□</button>
+    <button class="tb-btn x" onclick="api.close()">✕</button>
+  </div>
+</div>
+
+<div id="layout">
+
+  <div id="sidebar">
+    <div class="sec-hdr">⬡ Configuration</div>
+    <div class="controls">
+      <div>
+        <div class="lbl">Search Keyword</div>
+        <input type="text" id="keyword" placeholder="e.g. restaurants in Dubai">
+      </div>
+      <div>
+        <div class="lbl">Max Results</div>
+        <input type="number" id="total" value="50" min="1">
+      </div>
+      <div>
+        <div class="lbl">Export Folder</div>
+        <div class="folder-row">
+          <input type="text" id="folder" placeholder="Documents (default)" readonly>
+          <button class="folder-btn" onclick="pickFolder()">📁</button>
+        </div>
+      </div>
+      <button class="btn btn-start" id="btnStart" onclick="startScrape()">▶ Start Scraping</button>
+      <button class="btn btn-done"  id="btnDone"  onclick="doneScraping()">✓ Done Scrolling</button>
+      <button class="btn btn-stop"  id="btnStop"  onclick="stopScrape()">■ Stop</button>
+    </div>
+
+    <div class="status">
+      <div class="dot" id="dot"></div>
+      <span id="statusTxt">IDLE — Ready</span>
+    </div>
+
+    <div class="prog-wrap">
+      <div class="prog-label" id="progLbl">0 / 0</div>
+      <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-val" id="sScraped">0</div><div class="stat-lbl">Scraped</div></div>
+      <div class="stat"><div class="stat-val" id="sEmails">0</div><div class="stat-lbl">Emails</div></div>
+      <div class="stat"><div class="stat-val" id="sPhones">0</div><div class="stat-lbl">Phones</div></div>
+      <div class="stat"><div class="stat-val" id="sSites">0</div><div class="stat-lbl">Websites</div></div>
+    </div>
+  </div>
+
+  <div id="table-wrap">
+    <div class="sec-hdr">⬡ Live Results</div>
+    <div class="table-scroll" id="tableScroll">
+      <div class="empty" id="emptyState">
+        <div class="empty-icon">◈</div>
+        <div class="empty-txt">Waiting for data...</div>
+      </div>
+      <table id="tbl" style="display:none">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Phone Number</th>
+            <th>Email</th>
+            <th>Website</th>
+            <th>Address</th>
+            <th>Opens At</th>
+            <th>Introduction</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="log-wrap">
+    <div class="sec-hdr">⬡ Console</div>
+    <div id="log-body"></div>
+    <div id="done-bar">
+      <span class="done-msg" id="doneMsg">✓ Complete</span>
+      <button class="open-btn" id="openBtn">Open File Location</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+var exportFolder = null;
+var rowNum = 0, emails = 0, phones = 0, sites = 0;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function setStatus(state, msg) {
+  document.getElementById('dot').className = 'dot ' + state;
+  document.getElementById('statusTxt').textContent = msg;
+}
+
+function addLog(type, msg) {
+  var body = document.getElementById('log-body');
+  var t = new Date().toLocaleTimeString('en-US', {hour12: false});
+  var div = document.createElement('div');
+  div.className = 'll';
+  div.innerHTML = '<span class="lt">' + t + '</span><span class="' + type + '">' + esc(msg) + '</span>';
+  body.appendChild(div);
+  body.scrollTop = body.scrollHeight;
+}
+
+function setProg(cur, tot) {
+  document.getElementById('progFill').style.width = (tot > 0 ? (cur/tot*100) : 0) + '%';
+  document.getElementById('progLbl').textContent = cur + ' / ' + tot;
+}
+
+// ── THIS IS THE KEY FUNCTION — reads exact field names from main.js ────────────
+// main.js returns: { name, address, website, email, phone_number, place_type, opens_at, introduction }
+function addRow(p) {
+  rowNum++;
+
+  // Update stat counters
+  if (p.email && p.email.length > 0)        emails++;
+  if (p.phone_number && p.phone_number.length > 0) phones++;
+  if (p.website && p.website.length > 0)    sites++;
+
+  document.getElementById('sScraped').textContent = rowNum;
+  document.getElementById('sEmails').textContent  = emails;
+  document.getElementById('sPhones').textContent  = phones;
+  document.getElementById('sSites').textContent   = sites;
+
+  // Show table, hide empty state
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('tbl').style.display = 'table';
+
+  // Build row — every field name matches exactly what extractPlace() returns in main.js
+  var tr = document.createElement('tr');
+  tr.className = 'new';
+  tr.innerHTML =
+    '<td class="c-num">'                                          + rowNum              + '</td>' +
+    '<td class="c-name"  title="' + esc(p.name)         + '">' + esc(p.name)         + '</td>' +
+    '<td class="c-type"  title="' + esc(p.place_type)   + '">' + esc(p.place_type)   + '</td>' +
+    '<td class="c-phone" title="' + esc(p.phone_number) + '">' + esc(p.phone_number) + '</td>' +
+    '<td class="c-email" title="' + esc(p.email)        + '">' + esc(p.email)        + '</td>' +
+    '<td class="c-site"  title="' + esc(p.website)      + '">' + esc(p.website)      + '</td>' +
+    '<td class="c-addr"  title="' + esc(p.address)      + '">' + esc(p.address)      + '</td>' +
+    '<td class="c-hours" title="' + esc(p.opens_at)     + '">' + esc(p.opens_at)     + '</td>' +
+    '<td class="c-intro" title="' + esc(p.introduction) + '">' + esc(p.introduction) + '</td>';
+
+  document.getElementById('tbody').appendChild(tr);
+
+  // Auto-scroll table
+  var scroll = document.getElementById('tableScroll');
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function reset() {
+  rowNum = 0; emails = 0; phones = 0; sites = 0;
+  document.getElementById('tbody').innerHTML = '';
+  document.getElementById('tbl').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'flex';
+  document.getElementById('log-body').innerHTML = '';
+  document.getElementById('done-bar').classList.remove('show');
+  ['sScraped','sEmails','sPhones','sSites'].forEach(function(id){
+    document.getElementById(id).textContent = '0';
+  });
+  setProg(0, 0);
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+async function pickFolder() {
+  var f = await api.pickFolder();
+  if (f) { exportFolder = f; document.getElementById('folder').value = f; }
+}
+
+function startScrape() {
+  var keyword = document.getElementById('keyword').value.trim();
+  var total   = parseInt(document.getElementById('total').value) || 50;
+  if (!keyword) { addLog('error', 'Please enter a keyword first.'); return; }
+
+  reset();
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnDone').classList.remove('show');
+  document.getElementById('btnStop').classList.remove('show');
+  setStatus('active', 'Starting...');
+  addLog('info', 'Keyword: "' + keyword + '" — max ' + total + ' results');
+
+  // Fire and forget — main.js handles everything
+  api.startScrape({ keyword: keyword, total: total, folder: exportFolder });
+}
+
+function doneScraping() {
+  api.doneScrolling();
+  document.getElementById('btnDone').classList.remove('show');
+  document.getElementById('btnStop').classList.add('show');
+  setStatus('active', 'Scraping...');
+  addLog('info', 'Collecting data...');
+}
+
+function stopScrape() {
+  api.stop();
+  document.getElementById('btnStop').classList.remove('show');
+  addLog('warn', 'Stop requested...');
+}
+
+// ── IPC Listeners — receive data from main.js ─────────────────────────────────
+api.on('log', function(d) {
+  addLog(d.type, d.msg);
+});
+
+api.on('state', function(s) {
+  if (s === 'waiting') {
+    setStatus('waiting', 'Scroll Chrome then click Done Scrolling');
+    document.getElementById('btnDone').classList.add('show');
+    addLog('warn', 'Scroll in Chrome to load all listings, then click DONE SCROLLING.');
+  }
+  if (s === 'scraping') {
+    setStatus('active', 'Scraping...');
+  }
+});
+
+api.on('total', function(n) {
+  setProg(0, n);
+  addLog('info', 'Total listings to scrape: ' + n);
+});
+
+api.on('progress', function(d) {
+  setProg(d.current, d.total);
+});
+
+// THE MOST IMPORTANT LISTENER — receives each scraped place from main.js
+api.on('row', function(place) {
+  addLog('success', 'Row received: ' + (place.name || 'unnamed'));
+  addRow(place);
+});
+
+api.on('done', function(d) {
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnDone').classList.remove('show');
+  document.getElementById('btnStop').classList.remove('show');
+  setStatus('done', 'DONE — ' + d.count + ' records');
+  if (d.file) {
+    document.getElementById('done-bar').classList.add('show');
+    document.getElementById('doneMsg').textContent = '✓ ' + d.count + ' records → ' + d.file;
+    document.getElementById('openBtn').onclick = function() { api.revealFile(d.file); };
+  }
+});
+</script>
+</body>
+</html>

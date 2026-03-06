@@ -1,0 +1,66 @@
+{
+  "name": "gmaps-scraper",
+  "version": "1.0.0",
+  "description": "Google Maps Scraper",
+  "author": "GMaps Scraper",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64",
+    "build:mac": "electron-builder --mac"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0",
+    "xlsx": "^0.18.5",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.gmaps.scraper",
+    "productName": "GMaps Scraper",
+    "asar": false,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!.git/**",
+      "!*.sh",
+      "!*.bat",
+      "!*.md",
+      "!dist/**"
+    ],
+    "extraResources": [
+      {
+        "from": "node_modules/playwright/.local-browsers",
+        "to": "browsers"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "pkg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "public.app-category.productivity"
+    }
+  }
+}
